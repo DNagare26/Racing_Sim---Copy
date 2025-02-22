@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Menu.unity
+    guid: 46efafbeccefbdb47aec5cb2c811012a
+  - enabled: 1
+    path: Assets/Scenes/Settings.unity
+    guid: e1c1202157efbd644a15618f8de2aed7
+  - enabled: 1
+    path: Assets/Scenes/CarConfig.unity
+    guid: c28ea6d660842ed4581aa9b63320570d
+  - enabled: 1
+    path: Assets/Scenes/Training.unity
+    guid: 9416a9f32a6261c47b9aa22903a86567
+  - enabled: 1
+    path: Assets/Scenes/RacingScene.unity
+    guid: f1242a975cf6e8449ba75bddbd078b7b
+  - enabled: 1
+    path: Assets/Scenes/Results.unity
+    guid: 9624ca445ebb3924688338a870be3a47
+  - enabled: 1
+    path: Assets/Scenes/Guide.unity
+    guid: f8a0256332cfe844482208277f5dbb6f
+  m_configObjects: {}
