@@ -59,7 +59,7 @@ public class RaceManager : MonoBehaviour
             yield return new WaitForSeconds(1f);
         }
         StoreRaceResults();
-        SceneManager.LoadScene("ResultsScene");
+        SceneManager.LoadScene("Results");
     }
 
     private bool CheckRaceCompletion()

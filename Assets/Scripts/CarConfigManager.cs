@@ -31,7 +31,8 @@ public class CarConfigManager : MonoBehaviour
 
         if (!int.TryParse(numberOfCarsInput.text, out int carCount) || carCount <= 0 || carCount > 10)
         {
-            Debug.LogError("Invalid number of cars entered! Must be between 1 and 10.");
+            Debug.Log("Invalid number of cars entered! Must be between 1 and 10.");
+            carCount = 5;
             return;
         }
 
@@ -108,7 +109,7 @@ public class CarConfigManager : MonoBehaviour
     {
         if (carConfigurations.Count == 0)
         {
-            Debug.LogError("No car configurations to save!");
+            Debug.Log("No car configurations to save!");
             return;
         }
 

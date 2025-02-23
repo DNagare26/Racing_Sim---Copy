@@ -101,7 +101,7 @@ public class CarEvolutionManager : MonoBehaviour
     public void EndTraining()
     {
         Debug.Log("Training Complete. Moving to Next Scene.");
-        SceneManager.LoadScene("RaceScene"); // Ensure "RaceScene" is the correct scene name
+        SceneManager.LoadScene("RacingScene"); // Ensure "RaceScene" is the correct scene name
     }
 
 

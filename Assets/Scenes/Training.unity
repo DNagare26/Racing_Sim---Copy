@@ -849,8 +849,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 189c01441eee28640b6dd9e9ddcf428e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  timeScaleSlider: {fileID: 238030493}
-  timeScaleText: {fileID: 1712299477}
 --- !u!1 &251839751
 GameObject:
   m_ObjectHideFlags: 0
@@ -1441,50 +1439,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &604699624
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 604699626}
-  - component: {fileID: 604699627}
-  m_Layer: 0
-  m_Name: GameManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &604699626
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 604699624}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &604699627
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 604699624}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7e83ebbd790ed44bbeef7a433c2756f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &649869111
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -58481,10 +58435,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d503c3c9fe1c55c4ab93efff5b799765, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  acceleration: 5
-  topSpeed: 20
-  friction: 0.98
-  rotationSpeed: 100
 --- !u!1 &920875779
 GameObject:
   m_ObjectHideFlags: 0
@@ -58796,7 +58746,6 @@ GameObject:
   - component: {fileID: 963194228}
   - component: {fileID: 963194227}
   - component: {fileID: 963194226}
-  - component: {fileID: 963194229}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -58878,21 +58827,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &963194229
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 963194225}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68061dc0cf70ea142b2960d1070ed2e6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  cars: []
-  offset: {x: 0, y: 5, z: -10}
-  smoothSpeed: 5
 --- !u!1 &974243550
 GameObject:
   m_ObjectHideFlags: 0
@@ -59910,9 +59844,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: SceneChanger, Assembly-CSharp
-        m_MethodName: LoadRaceScene
+      - m_Target: {fileID: 1848828772}
+        m_TargetAssemblyTypeName: CarEvolutionManager, Assembly-CSharp
+        m_MethodName: EndTraining
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -60295,7 +60229,6 @@ SceneRoots:
   - {fileID: 705507995}
   - {fileID: 18946540}
   - {fileID: 649869111}
-  - {fileID: 604699626}
   - {fileID: 772201201}
   - {fileID: 1761870329}
   - {fileID: 172045323}
