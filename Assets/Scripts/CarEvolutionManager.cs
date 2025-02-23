@@ -1,116 +1,164 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 
 public class CarEvolutionManager : MonoBehaviour
 {
-    [Header("Settings")]
     public GameObject carPrefab;
-    public int populationSize = 10;
-    public float maxGenerationTime = 120f;
     public Transform[] spawnPoints;
-    public float timeScale = 2.0f;
-    public string nextSceneName = "RaceScene"; // Scene for racing
+    public Transform[] waypoints;
+    public int populationSize;
+    public TextMeshProUGUI generationText;
 
-    private Dictionary<CarData, List<CarAgent>> carTypeGroups = new Dictionary<CarData, List<CarAgent>>();
-    private float timer;
-    private int generationCount;
-    private bool trainingStopped = false;
+    [Header("Time Scale Controller")]
+    public Slider timeScaleSlider; // ✅ Add a slider to control training speed
+    
+    private int generationCount = 1;
+    private int activeCars;
+    private List<CarController> previousGenerationCars = new List<CarController>(); 
+    private Vector3 startPosition;   // Stores the initial spawn position
+    private Quaternion startRotation; // Stores the initial spawn rotation
 
+    
     public static CarEvolutionManager instance;
 
-    void Start()
+    private void Awake()
     {
-        if (instance == null) instance = this;
-
-        Time.timeScale = timeScale;
-        timer = maxGenerationTime;
-        InitializeCars();
-        StartCoroutine(TrainingLoop());
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
-    private void InitializeCars()
+    private void Start()
     {
         var carConfigs = GameManager.instance.GetCarConfigs();
-        foreach (var config in carConfigs)
+    
+        if (carConfigs == null || carConfigs.Count == 0)
         {
-            if (!carTypeGroups.ContainsKey(config))
-                carTypeGroups[config] = new List<CarAgent>();
-
-            for (int i = 0; i < populationSize; i++)
-            {
-                NeuralNetwork network = new NeuralNetwork(5, 8, 4); 
-
-                CarAgent agent = new CarAgent(config, network);
-                carTypeGroups[config].Add(agent);
-            }
+            Debug.LogError("No car configurations found in GameManager! Cannot start training.");
+            return;
         }
-    }
 
-    private IEnumerator TrainingLoop()
-    {
-        while (generationCount < 50 && !trainingStopped)
+        // ✅ Ensure `populationSize` matches the number of car configurations
+        populationSize = carConfigs.Count;
+
+        Debug.Log($"✅ Setting populationSize to {populationSize} (matches carConfigs.Count)");
+
+        if (timeScaleSlider != null)
         {
-            yield return new WaitForSeconds(1);
-            EvolveGeneration();
+            timeScaleSlider.onValueChanged.AddListener(UpdateTimeScale);
+            UpdateTimeScale(timeScaleSlider.value); // Set initial time scale
         }
         
+        InitialiseCars();
     }
 
-    private void EvolveGeneration()
+    private void Update()
     {
-        Dictionary<CarData, List<CarAgent>> newCarTypeGroups = new Dictionary<CarData, List<CarAgent>>(); // ✅ Temporary dictionary
-
-        foreach (var carGroup in carTypeGroups)
+        if (Input.GetKeyDown(KeyCode.Space)) // ✅ Detect Spacebar press
         {
-            List<CarAgent> agents = carGroup.Value;
-            agents.Sort((a, b) => b.GetFitness().CompareTo(a.GetFitness()));
+            Debug.Log("🔄 Spacebar pressed! Ending generation and starting next one...");
+            StartNextGeneration();
+        }
+    }
+    public void UpdateTimeScale(float value)
+    {
+        Time.timeScale = value; // ✅ Adjusts game speed
+        Time.fixedDeltaTime = 0.02f / value; // ✅ Adjusts physics updates
+        Debug.Log($"🕒 Time Scale Set to: {value}, Fixed Delta Time: {Time.fixedDeltaTime}");
+    }
 
-            List<CarAgent> newGeneration = new List<CarAgent> { agents[0] }; // Keep the best one
+    private void InitialiseCars()
+    {
+        Debug.Log($"🔄 Starting Generation {generationCount} with {populationSize} cars...");
 
-            for (int i = 1; i < agents.Count; i++)
+        var carConfigs = GameManager.instance.GetCarConfigs();
+        if (carConfigs == null || carConfigs.Count == 0)
+        {
+            Debug.LogError("No car configurations found! Cannot start training.");
+            return;
+        }
+
+        foreach (var car in previousGenerationCars)
+        {
+            if (car != null) Destroy(car.gameObject);
+        }
+        previousGenerationCars.Clear();
+
+        activeCars = 0;
+
+        for (int i = 0; i < populationSize; i++)
+        {
+            CarData config = carConfigs[i];
+            GameObject carObj = Instantiate(carPrefab, spawnPoints[i % spawnPoints.Length].position, spawnPoints[i % spawnPoints.Length].rotation);
+            CarController cc = carObj.GetComponent<CarController>();
+
+            cc.SetCarConfig(config);
+            cc.SetNeuralNetwork(new NeuralNetwork(8, 8, 2)); 
+            cc.SetWaypoints(waypoints);
+            
+            if (waypoints == null || waypoints.Length == 0)
             {
-                NeuralNetwork parent = agents[Random.Range(0, agents.Count / 2)].network;
-                float mutationRate = Mathf.Lerp(0.1f, 0.5f, generationCount / 20f);
-                NeuralNetwork child = parent.Mutate(mutationRate);
-                newGeneration.Add(new CarAgent(carGroup.Key, child));
+                Debug.LogError("⚠ Waypoints are not assigned to CarEvolutionManager!");
+            }
+            else
+            {
+                cc.SetWaypoints(waypoints); // ✅ Ensure waypoints are assigned
             }
 
-            newCarTypeGroups[carGroup.Key] = newGeneration; // ✅ Store in the temporary dictionary
+            if (cc.GetNeuralNetwork() == null)
+            {
+                cc.SetNeuralNetwork(new NeuralNetwork(8, 8, 2)); // ✅ Assign a new network if missing
+            }
+
+            if (waypoints != null && waypoints.Length > 0)
+            {
+                // ✅ Rotate car to face the first waypoint at spawn
+                Vector3 directionToFirstCheckpoint = (waypoints[0].position - carObj.transform.position).normalized;
+                directionToFirstCheckpoint.y = 0; // Keep car level
+                Quaternion lookRotation = Quaternion.LookRotation(directionToFirstCheckpoint);
+                carObj.transform.rotation = lookRotation;
+            }
+
+            previousGenerationCars.Add(cc);
+            activeCars++;
         }
 
-        carTypeGroups = newCarTypeGroups; // ✅ Replace the old dictionary with the updated one
-        generationCount++;
+        Debug.Log($"🚗 Spawned {activeCars} cars for Generation {generationCount}.");
     }
 
 
-    public void SaveTrainedModels()
-    {
-        List<NeuralNetwork> bestNetworks = new List<NeuralNetwork>();
 
-        foreach (var carGroup in carTypeGroups)
+
+
+    public void NotifyCarDestroyed(CarController car)
+    {
+        activeCars--;
+        previousGenerationCars.Remove(car);
+
+        if (activeCars <= 0)
         {
-            bestNetworks.Add(carGroup.Value[0].network); // Save the best AI for each car type
+            Debug.Log($"✅ All cars destroyed. Starting next generation...");
+            StartCoroutine(WaitBeforeNextGeneration());
         }
-
-        GameManager.instance.SetFinalAIModels(bestNetworks);
-        Debug.Log("Trained AI Models Saved!");
     }
 
-    public void EndTraining()
+    private IEnumerator WaitBeforeNextGeneration()
     {
-        Debug.Log("Training Complete. Moving to Next Scene.");
-        SceneManager.LoadScene("RacingScene"); // Ensure "RaceScene" is the correct scene name
+        yield return new WaitForSeconds(2f);
+        StartNextGeneration();
     }
 
-
-    public void StopTraining()
+    private void StartNextGeneration()
     {
-        SaveTrainedModels();
-        EndTraining();
-        trainingStopped = true;
-        Debug.Log("Training Stopped by User.");
+        generationCount++;
+        InitialiseCars();
     }
-    
 }

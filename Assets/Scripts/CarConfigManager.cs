@@ -21,6 +21,20 @@ public class CarConfigManager : MonoBehaviour
         saveButton.gameObject.SetActive(false);
     }
 
+    public static CarConfigManager instance; // ✅ Add instance reference
+
+    private void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this; // ✅ Set instance reference
+        }
+        else
+        {
+            Destroy(gameObject); // ✅ Prevent duplicate instances
+        }
+    }
+    
     public void GenerateCarConfigurations()
     {
         foreach (Transform child in configPanelContainer) Destroy(child.gameObject);
@@ -38,7 +52,17 @@ public class CarConfigManager : MonoBehaviour
 
         for (int i = 0; i < carCount; i++)
         {
-            CarData newCar = new CarData(200, 5, 1000, 50, 1.0f, 0.85f, 2.5f, "Sunny");
+            // ✅ More realistic car values
+            float topSpeed = Mathf.Round(Random.Range(20f, 60f) * 100f) / 100f; // km/h
+            float acceleration = Mathf.Round(Random.Range(1.5f, 5.5f) * 100f) / 100f; // m/s²
+            float downforce = Mathf.Round(Random.Range(50f, 200f) * 100f) / 100f; // Newtons
+            float fuel = Mathf.Round(Random.Range(30f, 100f) * 100f) / 100f; // liters
+            float tyreGrip = Mathf.Round(Random.Range(0.7f, 1.3f) * 100f) / 100f; // Grip level
+            float aeroEfficiency = Mathf.Round(Random.Range(0.75f, 0.95f) * 100f) / 100f; // Less drag is better
+            float pitStopTime = Mathf.Round(Random.Range(2.5f, 6f) * 100f) / 100f; // Time in pit stop (seconds)
+            
+            
+            CarData newCar = new CarData(topSpeed, acceleration, downforce, fuel, tyreGrip, aeroEfficiency, pitStopTime, "Sunny");
             carConfigurations.Add(newCar);
 
             GameObject panel = Instantiate(carConfigTemplate, configPanelContainer);

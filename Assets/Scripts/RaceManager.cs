@@ -19,36 +19,48 @@ public class RaceManager : MonoBehaviour
     {
         var carConfigs = GameManager.instance.GetCarConfigs();
         var aiModels = GameManager.instance.GetFinalAIModels();
-        if (carConfigs == null || aiModels == null)
+
+        if (carConfigs == null || aiModels == null || carConfigs.Count == 0 || aiModels.Count == 0)
         {
             Debug.LogError("No car configurations or AI models found!");
             return;
         }
 
-        numCars = Mathf.Min(startPositions.Length, carConfigs.Count, aiModels.Count);
+        if (carConfigs.Count != aiModels.Count)
+        {
+            Debug.LogError($"Mismatch! CarConfigs ({carConfigs.Count}) and AI Models ({aiModels.Count}) are not equal.");
+            return;
+        }
+
+        numCars = carConfigs.Count; // ✅ Ensure one config = one car
         raceCars = new CarController[numCars];
 
         for (int i = 0; i < numCars; i++)
         {
-            GameObject carObj = Instantiate(carPrefab, startPositions[i].position, startPositions[i].rotation);
+            GameObject carObj = Instantiate(carPrefab, startPositions[i % startPositions.Length].position, startPositions[i % startPositions.Length].rotation);
+            carObj.tag = "Car";
+
             CarController cc = carObj.GetComponent<CarController>();
 
             try
             {
-                cc.SetCarConfig(carConfigs[i]);
-                cc.SetNeuralNetwork(aiModels[i]);
+                cc.SetCarConfig(carConfigs[i]); // ✅ Assign correct config
+                cc.SetNeuralNetwork(aiModels[i]); // ✅ Assign correct AI
             }
             catch (System.Exception ex)
             {
-                Debug.LogError("Error initializing car " + i + ": " + ex.Message);
+                Debug.LogError($"Error initializing car {i}: {ex.Message}");
             }
 
             cc.ResetCar();
             raceCars[i] = cc;
         }
 
-        StartCoroutine(RaceLoop());
+        Debug.Log($"🚗 Race started with {numCars} cars.");
     }
+
+
+
 
     private IEnumerator RaceLoop()
     {
@@ -60,15 +72,6 @@ public class RaceManager : MonoBehaviour
         }
         StoreRaceResults();
         SceneManager.LoadScene("Results");
-    }
-
-    private bool CheckRaceCompletion()
-    {
-        foreach (CarController cc in raceCars)
-        {
-            if (cc.lapCount < totalLaps) return false;
-        }
-        return true;
     }
 
     private void StoreRaceResults()
@@ -90,15 +93,24 @@ public class RaceManager : MonoBehaviour
         GameManager.instance.SetRaceResults(results);
     }
 
-
     private void UpdateLeaderboard()
     {
-        System.Array.Sort(raceCars, (a, b) => b.lapCount.CompareTo(a.lapCount));
+        System.Array.Sort(raceCars, (a, b) => b.GetLapsCompleted().CompareTo(a.GetLapsCompleted()));
+
         string text = "Leaderboard\n";
         for (int i = 0; i < raceCars.Length; i++)
         {
-            text += $"{i + 1}. Car {i + 1} - Laps: {raceCars[i].lapCount}\n";
+            text += $"{i + 1}. Car {i + 1} - Laps: {raceCars[i].GetLapsCompleted()}\n";
         }
         leaderboardText.text = text;
+    }
+
+    private bool CheckRaceCompletion()
+    {
+        foreach (CarController cc in raceCars)
+        {
+            if (cc.GetLapsCompleted() < totalLaps) return false; // ✅ Wait until all cars complete 15 laps
+        }
+        return true;
     }
 }

@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Wall
   - Car
+  - FinishLine
+  - StartLine
   layers:
   - Default
   - TransparentFX

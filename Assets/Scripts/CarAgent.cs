@@ -11,6 +11,11 @@ public class CarAgent
         carData = config;
         network = net;
     }
+    public CarAgent(float fitness, NeuralNetwork net)
+    {
+        fitnessScore = fitness;
+        network = net;
+    }
 
     public void UpdateFitness(float distanceTravelled, Rigidbody rb)
     {

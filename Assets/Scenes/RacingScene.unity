@@ -57698,7 +57698,6 @@ GameObject:
   - component: {fileID: 963194227}
   - component: {fileID: 963194226}
   - component: {fileID: 963194229}
-  - component: {fileID: 963194230}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -57789,27 +57788,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 963194225}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 68061dc0cf70ea142b2960d1070ed2e6, type: 3}
+  m_Script: {fileID: 11500000, guid: b978c0b848f97544a8d646177f486755, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cars: []
   offset: {x: 0, y: 5, z: -10}
   smoothSpeed: 5
---- !u!114 &963194230
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 963194225}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e36b3367712bdda45bc90396a59b7dcb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  target: {fileID: 7385953682860165863, guid: d0504164053243449b6687fc7f6c6346, type: 3}
-  smoothSpeed: 0.1
-  offset: {x: 0, y: 10, z: -10}
 --- !u!1 &1267909508
 GameObject:
   m_ObjectHideFlags: 0

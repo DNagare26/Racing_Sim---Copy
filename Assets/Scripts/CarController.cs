@@ -1,5 +1,5 @@
-using System.Collections;
 using UnityEngine;
+using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
 public class CarController : MonoBehaviour
@@ -15,41 +15,62 @@ public class CarController : MonoBehaviour
 
     [Header("Car Status")]
     public float currentSpeed = 0f;
-    private float fuelConsumptionRate = 0.1f;
-    private bool isRefuelling = false;
     private bool isDestroyed = false;
     public int lapCount = 0;
 
+
     private Rigidbody rb;
     private NeuralNetwork network;
-    private Vector3 lastPosition;
-    private float distanceTravelled = 0f;
-    private Vector3 startPosition;
-    private Quaternion startRotation;
+    private Transform[] waypoints;
+    private int nextCheckpointIndex = 0;
+    private float fitness = 0f;
 
+    private Vector3 startPosition;   // Stores the initial spawn position
+    private Quaternion startRotation; // Stores the initial spawn rotation
+
+
+    private float checkpointReward = 500f;
+    private float checkpointDetectionRadius = 7.5f;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = true; 
-        startPosition = transform.position;  // Store initial position
-        startRotation = transform.rotation;  // Store initial rotation
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        lastPosition = transform.position;
-    }
+        rb.useGravity = true;
 
-    private void FixedUpdate()
-    {
-        if (isDestroyed || isRefuelling) return;
+        startPosition = transform.position;
+        startRotation = transform.rotation;
 
-        distanceTravelled += Vector3.Distance(transform.position, lastPosition);
-        lastPosition = transform.position;
+        if (waypoints == null || waypoints.Length == 0)
+        {
+            Debug.LogError($"{gameObject.name} has no waypoints assigned!"); // ✅ Debug missing waypoints
+        }
 
         if (network == null)
         {
-            Debug.LogError($"Neural Network is NOT assigned to {gameObject.name}!");
-            return;
+            Debug.LogError($"{gameObject.name} has no Neural Network assigned!"); // ✅ Debug missing network
         }
+        
+        if (waypoints != null && waypoints.Length > 0)
+        {
+            nextCheckpointIndex = 0; // ✅ Ensure the first checkpoint is targeted
+
+            // ✅ Rotate the car to face the first checkpoint
+            Vector3 directionToFirstCheckpoint = (waypoints[0].position - transform.position).normalized;
+            directionToFirstCheckpoint.y = 0; // Keep car level
+            transform.rotation = Quaternion.LookRotation(directionToFirstCheckpoint);
+        }
+        else
+        {
+            Debug.LogError($"{gameObject.name} has no waypoints assigned!");
+        }
+    }
+
+
+    
+
+    private void FixedUpdate()
+    {
+        if (isDestroyed || network == null || waypoints == null || waypoints.Length == 0) return; // ✅ Prevent errors
 
         float[] inputs = GetSensorInputs();
         float[] outputs = network.ForwardPass(inputs);
@@ -61,9 +82,78 @@ public class CarController : MonoBehaviour
         ApplySteering(steering);
         ApplyDownforce();
         ApplyDrag();
-        ApplyFuelConsumption();
 
-        transform.Rotate(0, steering * 3f, 0);
+        DetectCheckpoint();
+    }
+
+    private float[] GetSensorInputs()
+    {
+        if (waypoints.Length == 0) return new float[8]; // Avoid errors if no waypoints exist
+
+        Transform nextCheckpoint = waypoints[nextCheckpointIndex];
+        Vector3 directionToCheckpoint = (nextCheckpoint.position - transform.position).normalized;
+        float distanceToCheckpoint = Vector3.Distance(transform.position, nextCheckpoint.position);
+
+        return new float[]
+        {
+            currentSpeed / topSpeed,                   // Speed ratio
+            fuel / 50f,                                // Fuel level ratio
+            tyreGrip,                                  // Tyre grip
+            acceleration / 10f,                        // Acceleration ratio
+            downforce / 500f,                          // Downforce ratio
+            directionToCheckpoint.x,                   // X direction to next checkpoint
+            directionToCheckpoint.z,                   // Z direction to next checkpoint
+            Mathf.Clamp01(distanceToCheckpoint / 100f) // Normalised distance to checkpoint
+        };
+    }
+    
+
+
+
+    private void DetectCheckpoint()
+    {
+        if (waypoints == null || waypoints.Length == 0) return;
+
+        Transform nextCheckpoint = waypoints[nextCheckpointIndex];
+        float distanceToCheckpoint = Vector3.Distance(transform.position, nextCheckpoint.position);
+
+        if (distanceToCheckpoint <= checkpointDetectionRadius)
+        {
+            fitness += checkpointReward;
+
+            // ✅ Move to the next checkpoint (looping back to 0 if at the last checkpoint)
+            nextCheckpointIndex = (nextCheckpointIndex + 1) % waypoints.Length;
+
+            Debug.Log($"✅ {gameObject.name} reached checkpoint {nextCheckpointIndex}! Fitness: {fitness}");
+        }
+    }
+
+
+    public void SetWaypoints(Transform[] newWaypoints)
+    {
+        waypoints = newWaypoints;
+    }
+    public void SetCarConfig(CarData config)
+    {
+        topSpeed = config.topSpeed;
+        acceleration = config.acceleration;
+        downforce = config.downforce;
+        fuel = config.fuel;
+        tyreGrip = config.tyreGrip;
+        aeroEfficiency = config.aeroEfficiency;
+        pitStopTime = config.pitStopTime;
+    }
+    public int GetLapsCompleted()
+    {
+        return lapCount;
+    }
+    public void ResetCar()
+    {
+        if (rb == null) rb = GetComponent<Rigidbody>(); // Ensure Rigidbody is assigned
+        
+        rb.velocity = Vector3.zero; // Stop movement
+        rb.angularVelocity = Vector3.zero; // Stop rotation
+        lapCount = 0; // Reset lap count
     }
 
     private void ApplyAcceleration(float throttle)
@@ -80,8 +170,9 @@ public class CarController : MonoBehaviour
 
     private void ApplySteering(float steeringInput)
     {
-        float speedFactor = 1 - (currentSpeed / topSpeed);
-        float turnAngle = Mathf.Clamp(steeringInput * speedFactor, -1f, 1f) * 30f;
+        float speedFactor = Mathf.Clamp01(1 - (currentSpeed / topSpeed));
+        float maxTurnAngle = Mathf.Lerp(10f, 30f, speedFactor);
+        float turnAngle = Mathf.Clamp(steeringInput * maxTurnAngle, -maxTurnAngle, maxTurnAngle);
         Quaternion turnRotation = Quaternion.Euler(0f, turnAngle * Time.deltaTime, 0f);
         rb.MoveRotation(rb.rotation * turnRotation);
     }
@@ -97,66 +188,45 @@ public class CarController : MonoBehaviour
         rb.AddForce(-rb.velocity.normalized * dragForce, ForceMode.Force);
     }
 
-    private void ApplyFuelConsumption()
+    /// <summary>
+    /// Handles car destruction when colliding with walls.
+    /// </summary>
+    private void OnCollisionEnter(Collision collision)
     {
-        fuel -= fuelConsumptionRate * Time.deltaTime;
-        if (fuel <= 0)
+        if (collision.gameObject.CompareTag("Wall"))
         {
-            StartCoroutine(HandlePitStop());
+            float impactForce = collision.relativeVelocity.magnitude;
+            fitness -= impactForce * 50f; // ✅ Apply fitness penalty for crashing
+
+            Debug.Log($"❌ {gameObject.name} crashed into a wall! Impact Force: {impactForce}, Fitness: {fitness}");
+            DestroyCar();
         }
     }
 
-    private IEnumerator HandlePitStop()
+    public void DestroyCar()
     {
-        isRefuelling = true;
-        rb.velocity = Vector3.zero;
-        yield return new WaitForSeconds(pitStopTime);
-        fuel = 50f;
-        isRefuelling = false;
-    }
+        if (isDestroyed) return;
+        isDestroyed = true;
+        gameObject.SetActive(false);
 
-    private float[] GetSensorInputs()
-    {
-        return new float[]
+        if (CarEvolutionManager.instance != null)
         {
-            currentSpeed / topSpeed,
-            fuel / 50f,
-            tyreGrip,
-            acceleration / 10f,
-            downforce / 500f
-        };
+            CarEvolutionManager.instance.NotifyCarDestroyed(this); // ✅ Notify Evolution Manager
+        }
     }
 
-    public void SetCarConfig(CarData config)
+    public float GetFitness()
     {
-        topSpeed = config.topSpeed;
-        acceleration = config.acceleration;
-        downforce = config.downforce;
-        fuel = config.fuel;
-        tyreGrip = config.tyreGrip;
-        aeroEfficiency = config.aeroEfficiency;
-        pitStopTime = config.pitStopTime;
+        return fitness;
+    }
+
+    public NeuralNetwork GetNeuralNetwork()
+    {
+        return network;
     }
 
     public void SetNeuralNetwork(NeuralNetwork net)
     {
         network = net;
     }
-
-    public float GetFitness()
-    {
-        return distanceTravelled * Mathf.Max(0, Vector3.Dot(transform.forward, rb.velocity.normalized));
-    }
-    
-    public void ResetCar()
-    {
-        if (rb == null) rb = GetComponent<Rigidbody>(); // Ensure Rigidbody is assigned
-
-        transform.position = startPosition; // Reset position
-        transform.rotation = startRotation; // Reset rotation
-        rb.velocity = Vector3.zero; // Stop movement
-        rb.angularVelocity = Vector3.zero; // Stop rotation
-        lapCount = 0; // Reset lap count
-    }
-
 }
