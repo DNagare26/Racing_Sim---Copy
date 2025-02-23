@@ -1,94 +1,116 @@
+using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
-/// <summary>
-/// Handles AI evolution using 1+1 Evolution Strategy with 10 AI cars.
-/// </summary>
 public class CarEvolutionManager : MonoBehaviour
 {
+    [Header("Settings")]
     public GameObject carPrefab;
-    public Transform[] spawnPoints; // Array of 10 spawn points
-    public int totalGenerations = 100;
-    public float trainingTime = 120f;
+    public int populationSize = 10;
+    public float maxGenerationTime = 120f;
+    public Transform[] spawnPoints;
+    public float timeScale = 2.0f;
+    public string nextSceneName = "RaceScene"; // Scene for racing
 
-    private List<CarController> cars = new List<CarController>();
-    private List<NeuralNetwork> networks = new List<NeuralNetwork>();
-    private int generationCount = 1;
-    private bool isTraining = true;
-    private float mutationRate = 0.1f; // Initial mutation rate
+    private Dictionary<CarData, List<CarAgent>> carTypeGroups = new Dictionary<CarData, List<CarAgent>>();
+    private float timer;
+    private int generationCount;
+    private bool trainingStopped = false;
 
-    private void Start()
+    public static CarEvolutionManager instance;
+
+    void Start()
     {
-        InitialiseNetworks();
+        if (instance == null) instance = this;
+
+        Time.timeScale = timeScale;
+        timer = maxGenerationTime;
+        InitializeCars();
         StartCoroutine(TrainingLoop());
     }
 
-    private void InitialiseNetworks()
+    private void InitializeCars()
     {
-        for (int i = 0; i < spawnPoints.Length; i++)
+        var carConfigs = GameManager.instance.GetCarConfigs();
+        foreach (var config in carConfigs)
         {
-            networks.Add(new NeuralNetwork(new int[] { 5, 8, 4 }));
+            if (!carTypeGroups.ContainsKey(config))
+                carTypeGroups[config] = new List<CarAgent>();
+
+            for (int i = 0; i < populationSize; i++)
+            {
+                NeuralNetwork network = new NeuralNetwork(5, 8, 4); 
+
+                CarAgent agent = new CarAgent(config, network);
+                carTypeGroups[config].Add(agent);
+            }
         }
     }
 
     private IEnumerator TrainingLoop()
     {
-        while (isTraining && generationCount <= totalGenerations)
+        while (generationCount < 50 && !trainingStopped)
         {
-            SpawnCars();
-            yield return new WaitForSeconds(trainingTime);
-            EvaluateAndEvolve();
-            generationCount++;
+            yield return new WaitForSeconds(1);
+            EvolveGeneration();
         }
-
-        Debug.Log("Training Complete! Loading Race Scene...");
-        GameManager.instance.SetFinalAIModels(networks);
-        UnityEngine.SceneManagement.SceneManager.LoadScene("RaceScene");
+        
     }
 
-    private void SpawnCars()
+    private void EvolveGeneration()
     {
-        foreach (var car in cars) Destroy(car.gameObject);
-        cars.Clear();
+        Dictionary<CarData, List<CarAgent>> newCarTypeGroups = new Dictionary<CarData, List<CarAgent>>(); // ✅ Temporary dictionary
 
-        for (int i = 0; i < spawnPoints.Length; i++)
+        foreach (var carGroup in carTypeGroups)
         {
-            GameObject carObj = Instantiate(carPrefab, spawnPoints[i].position, spawnPoints[i].rotation);
-            CarController car = carObj.GetComponent<CarController>();
-            car.SetNeuralNetwork(networks[i]);
-            cars.Add(car);
+            List<CarAgent> agents = carGroup.Value;
+            agents.Sort((a, b) => b.GetFitness().CompareTo(a.GetFitness()));
+
+            List<CarAgent> newGeneration = new List<CarAgent> { agents[0] }; // Keep the best one
+
+            for (int i = 1; i < agents.Count; i++)
+            {
+                NeuralNetwork parent = agents[Random.Range(0, agents.Count / 2)].network;
+                float mutationRate = Mathf.Lerp(0.1f, 0.5f, generationCount / 20f);
+                NeuralNetwork child = parent.Mutate(mutationRate);
+                newGeneration.Add(new CarAgent(carGroup.Key, child));
+            }
+
+            newCarTypeGroups[carGroup.Key] = newGeneration; // ✅ Store in the temporary dictionary
         }
+
+        carTypeGroups = newCarTypeGroups; // ✅ Replace the old dictionary with the updated one
+        generationCount++;
     }
 
-    private float lastBestFitness = 0f;
 
-    private void EvaluateAndEvolve()
+    public void SaveTrainedModels()
     {
-        List<CarController> sortedCars = new List<CarController>(cars);
-        sortedCars.Sort((a, b) => b.GetFitness().CompareTo(a.GetFitness()));
+        List<NeuralNetwork> bestNetworks = new List<NeuralNetwork>();
 
-        float bestFitness = sortedCars[0].GetFitness();
+        foreach (var carGroup in carTypeGroups)
+        {
+            bestNetworks.Add(carGroup.Value[0].network); // Save the best AI for each car type
+        }
+
+        GameManager.instance.SetFinalAIModels(bestNetworks);
+        Debug.Log("Trained AI Models Saved!");
+    }
+
+    public void EndTraining()
+    {
+        Debug.Log("Training Complete. Moving to Next Scene.");
+        SceneManager.LoadScene("RaceScene"); // Ensure "RaceScene" is the correct scene name
+    }
+
+
+    public void StopTraining()
+    {
+        SaveTrainedModels();
+        EndTraining();
+        trainingStopped = true;
+        Debug.Log("Training Stopped by User.");
+    }
     
-        if (bestFitness > lastBestFitness)
-        {
-            mutationRate *= 0.9f; // Reduce mutation if progress is made
-        }
-        else
-        {
-            mutationRate *= 1.1f; // Increase mutation if stuck
-        }
-
-        mutationRate = Mathf.Clamp(mutationRate, 0.05f, 0.3f); // Keep it within bounds
-        lastBestFitness = bestFitness;
-
-        for (int i = 0; i < networks.Count; i++)
-        {
-            if (i == 0)
-                networks[i] = sortedCars[i].GetNeuralNetwork();
-            else
-                networks[i] = sortedCars[0].GetNeuralNetwork().Mutate(mutationRate);
-        }
-    }
-
 }

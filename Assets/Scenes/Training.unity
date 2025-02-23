@@ -59812,6 +59812,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   carPrefab: {fileID: 4002686755209691915, guid: 06a5219c1d0682a4c8c4fe0d76c46300, type: 3}
+  populationSize: 10
+  maxGenerationTime: 120
   spawnPoints:
   - {fileID: 772201201}
   - {fileID: 1761870329}
@@ -59823,8 +59825,8 @@ MonoBehaviour:
   - {fileID: 1996701250}
   - {fileID: 942558076}
   - {fileID: 251839754}
-  totalGenerations: 100
-  trainingTime: 120
+  timeScale: 2
+  nextSceneName: RacingScene
 --- !u!1 &1911770149
 GameObject:
   m_ObjectHideFlags: 0

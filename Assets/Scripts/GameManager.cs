@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
     private List<CarData> carConfigs = new List<CarData>();
     private Queue<RaceResult> raceResults = new Queue<RaceResult>();
     private List<NeuralNetwork> finalAIModels = new List<NeuralNetwork>();
+    private List<NeuralNetwork> trainedAIModels = new List<NeuralNetwork>();
 
     private void Awake()
     {
@@ -65,5 +66,15 @@ public class GameManager : MonoBehaviour
     public Queue<RaceResult> GetRaceResults()
     {
         return raceResults;
+    }
+    
+    public void StoreTrainedAIModels(List<NeuralNetwork> models)
+    {
+        trainedAIModels = models;
+    }
+
+    public List<NeuralNetwork> GetTrainedAIModels()
+    {
+        return trainedAIModels;
     }
 }
